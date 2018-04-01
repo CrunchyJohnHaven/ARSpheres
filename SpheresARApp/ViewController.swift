@@ -15,7 +15,7 @@ import SceneKit
 import ARKit
 
 
-class ViewController: UIViewController, ARSCNViewDelegate {
+class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
     let scene = SCNScene()
     var changeX: Int = -1
     var changeY: Int = -1
@@ -26,8 +26,9 @@ class ViewController: UIViewController, ARSCNViewDelegate {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        sceneView.session.delegate = self
         positions()
-
+        addTapGestureToSceneView()
         
         // Set the view's delegate
         sceneView.delegate = self
@@ -56,7 +57,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         
     }
     func createSpheres(at position: SCNVector3) -> SCNNode {
-        let sphere = SCNSphere(radius: 0.2)
+        let sphere = SCNSphere(radius: 2)
         let material = SCNMaterial()
         material.diffuse.contents = UIImage(named: "art.scnassets/earth.jpeg")
         sphere.firstMaterial = material
@@ -64,6 +65,19 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         sphereNode.position = position
         return sphereNode
     }
+    func addTapGestureToSceneView() {
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(ViewController.didTap(withGestureRecognizer:)))
+        sceneView.addGestureRecognizer(tapGestureRecognizer)
+    }
+
+    @objc func didTap(withGestureRecognizer recognizer: UIGestureRecognizer) {
+        print("did tap")
+        let tapLocation = recognizer.location(in: sceneView)
+        let hitTestResults = sceneView.hitTest(tapLocation)
+        guard let node = hitTestResults.first?.node else { return }
+        node.removeFromParentNode()
+    }
+
 
     func positions() {
         var i = 0
@@ -81,14 +95,6 @@ class ViewController: UIViewController, ARSCNViewDelegate {
                     self.globePositions.append([Float(self.changeX), Float(self.changeY), Float(self.changeZ)])
                     i = i + 1
             }
-        }
-    }
-    @objc func tapped(recognizer :UITapGestureRecognizer) {
-        let sceneView = recognizer.view as! ARSCNView
-        let touchLocation = recognizer.location(in: sceneView)
-        let hitResults = sceneView.hitTest(touchLocation, options: [:])
-        if !hitResults.isEmpty {
-            // this means the node has been touched
         }
     }
  
@@ -115,6 +121,24 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         return range.lowerBound + Int(arc4random_uniform(UInt32(range.upperBound - range.lowerBound)))
     }
     
+    func session(_ session: ARSession, didUpdate frame: ARFrame) {
+//        print("session")
+        guard let pointOfView = sceneView.pointOfView else { return }
+        let transform = pointOfView.transform
+        let location = SCNVector3(transform.m41, transform.m42, transform.m43)
+        print("currentTransform:", location)
+    }
+//    func renderer(_ renderer: SCNSceneRenderer, willRenderScene scene: SCNScene, atTime time: TimeInterval) {
+//        guard let pointOfView = sceneView.pointOfView else { return }
+//        let transform = pointOfView.transform
+//        let orientation = SCNVector3(-transform.m31, -transform.m32, transform.m33)
+//        let location = SCNVector3(transform.m41, transform.m42, transform.m43)
+//        let currentPositionOfCamera = orientation + location
+//        print(currentPositionOfCamera)
+//    }
+    
+//    currentTransform: simd_float4x4([[-0.0485429, -0.931665, 0.360062, 0.0)], [0.998819, -0.0445781, 0.0193128, 0.0)], [-0.00194216, 0.360574, 0.932728, 0.0)], [-0.0230406, -0.00373207, 0.00755047, 1.0)]])
+
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
@@ -129,14 +153,9 @@ class ViewController: UIViewController, ARSCNViewDelegate {
 
     // MARK: - ARSCNViewDelegate
     
-/*
+
     // Override to create and configure nodes for anchors added to the view's session.
-    func renderer(_ renderer: SCNSceneRenderer, nodeFor anchor: ARAnchor) -> SCNNode? {
-        let node = SCNNode()
-     
-        return node
-    }
-*/
+
     
 
 
