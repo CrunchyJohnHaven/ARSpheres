@@ -17,52 +17,58 @@ import ARKit
 
 class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
     let scene = SCNScene()
-    var changeX: Int = -1
-    var changeY: Int = -1
-    var changeZ: Int = -1
+    var changeX: Float?
+    var changeY: Float?
+    var changeZ: Float?
     var globePositions: [[Float]] = []
+    var bool: Bool?
     
     @IBOutlet var sceneView: ARSCNView!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         sceneView.session.delegate = self
-        positions()
+        
         addTapGestureToSceneView()
         
-        // Set the view's delegate
         sceneView.delegate = self
-        
-        // Show statistics such as fps and timing information
         sceneView.showsStatistics = true
-        
-        // Create a new scene
-        
-        
-        // Set the scene to the view
         sceneView.self.scene = scene
-        positions()
         
-
+        positions()
     }
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        positions()
-        // Create a session configuration
         let configuration = ARWorldTrackingConfiguration()
-
-        // Run the view's session
         sceneView.session.run(configuration)
-        
-        
+//        refreshView()
     }
+    
+    func refreshView() {
+        print("refresh")
+        for child in self.scene.rootNode.childNodes {
+            child.removeFromParentNode()
+        }
+        positions()
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        sceneView.session.pause()
+    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+    }
+    
     func createSpheres(at position: SCNVector3) -> SCNNode {
-        let sphere = SCNSphere(radius: 2)
+        let sphere = SCNSphere(radius: 0.0254)
         let material = SCNMaterial()
         material.diffuse.contents = UIImage(named: "art.scnassets/earth.jpeg")
         sphere.firstMaterial = material
         let sphereNode = SCNNode(geometry: sphere)
         sphereNode.position = position
+        sphereNode.opacity = 1.0
         return sphereNode
     }
     func addTapGestureToSceneView() {
@@ -71,107 +77,82 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
     }
 
     @objc func didTap(withGestureRecognizer recognizer: UIGestureRecognizer) {
-        print("did tap")
-        let tapLocation = recognizer.location(in: sceneView)
-        let hitTestResults = sceneView.hitTest(tapLocation)
-        guard let node = hitTestResults.first?.node else { return }
-        node.removeFromParentNode()
+        refreshView()
+
     }
-
-
+    
     func positions() {
         var i = 0
-            while i < 10 {
-                self.changeX = random(-20..<20)
-                self.changeY = random(-20..<20)
-                self.changeZ = random(-20..<20)
-                let check = checkDistance(x: Float(self.changeX), y: Float(self.changeY), z: Float(self.changeZ))
-                print(check)
-                if check == true {
-                    print(check)
-                    let position = SCNVector3(self.changeX,self.changeY, self.changeZ)
-                    let globe = createSpheres(at: position)
-                    self.scene.rootNode.addChildNode(globe)
-                    self.globePositions.append([Float(self.changeX), Float(self.changeY), Float(self.changeZ)])
-                    i = i + 1
+        while i < 10 {
+            self.changeX = random(-1000..<1000)
+            self.changeY = random(-1000..<1000)
+            self.changeZ = random(-1000..<1000)
+            let position = SCNVector3(self.changeX!,self.changeY!, self.changeZ!)
+            let sphere = createSpheres(at: position)
+            for child in self.scene.rootNode.childNodes {
+                self.bool = true
+                let distance = sphere.position - child.position
+                let length = distance.length()
+                if length < 0.3048 {
+                    self.bool = false
+                }
+            }
+            if self.bool == true {
+                self.scene.rootNode.addChildNode(sphere)
+                self.globePositions.append([Float(self.changeX!), Float(self.changeY!), Float(self.changeZ!)])
+                i = i + 1
             }
         }
+        print(self.scene.rootNode.childNodes)
     }
- 
-    func checkDistance(x: Float, y: Float, z: Float) -> Bool {
-        var bool = true
-        for i in self.globePositions {
-        print(i)
-        var a = (x - i[0])
-        a = a*a
-        var b = (y  - i[1])
-        b = b*b
-        var c = (z - i[2])
-        c = c*c
-        let length: Float = sqrtf(Float(a + b + c))
-        print("length:", length)
-        if length < 12 {
-            print("length at false: ", length)
-            bool = false
-            }
-        }
-        return bool
-    }
-    func random(_ range:Range<Int>) -> Int {
-        return range.lowerBound + Int(arc4random_uniform(UInt32(range.upperBound - range.lowerBound)))
+    
+    func random(_ range:Range<Float>) -> Float {
+        print("range.lowerBound: ", range.lowerBound, "  ", "range.upperBound: ", range.upperBound)
+        var x = range.lowerBound + Float(arc4random_uniform(UInt32(range.upperBound - range.lowerBound)))
+        x = x/1000
+        print(x)
+        return x
+        
     }
     
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
-//        print("session")
         guard let pointOfView = sceneView.pointOfView else { return }
         let transform = pointOfView.transform
         let location = SCNVector3(transform.m41, transform.m42, transform.m43)
-        print("currentTransform:", location)
-    }
-//    func renderer(_ renderer: SCNSceneRenderer, willRenderScene scene: SCNScene, atTime time: TimeInterval) {
-//        guard let pointOfView = sceneView.pointOfView else { return }
-//        let transform = pointOfView.transform
-//        let orientation = SCNVector3(-transform.m31, -transform.m32, transform.m33)
-//        let location = SCNVector3(transform.m41, transform.m42, transform.m43)
-//        let currentPositionOfCamera = orientation + location
-//        print(currentPositionOfCamera)
-//    }
-    
-//    currentTransform: simd_float4x4([[-0.0485429, -0.931665, 0.360062, 0.0)], [0.998819, -0.0445781, 0.0193128, 0.0)], [-0.00194216, 0.360574, 0.932728, 0.0)], [-0.0230406, -0.00373207, 0.00755047, 1.0)]])
-
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        
-        // Pause the view's session
-        sceneView.session.pause()
-    }
-    
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Release any cached data, images, etc that aren't in use.
+        for child in self.scene.rootNode.childNodes {
+            let distance = location - child.position
+            let length = distance.length()
+            var opacity = CGFloat(1) - CGFloat(Float(length)/1.5)
+            if opacity > 1.0 {
+                child.opacity = 1.0
+            }
+            else {
+                if opacity < 0.2 {
+                    opacity = 0.2
+                }
+                child.opacity = opacity
+            }
+//            print("child length:", length, "child opacity: ", child.opacity)
+        }
     }
 
-    // MARK: - ARSCNViewDelegate
-    
-
-    // Override to create and configure nodes for anchors added to the view's session.
-
-    
-
-
-    
     func session(_ session: ARSession, didFailWithError error: Error) {
-        // Present an error message to the user
-        
     }
     
     func sessionWasInterrupted(_ session: ARSession) {
-        // Inform the user that the session has been interrupted, for example, by presenting an overlay
-        
     }
     
     func sessionInterruptionEnded(_ session: ARSession) {
-        // Reset tracking and/or remove existing anchors if consistent tracking is required
-        
     }
 }
+extension SCNVector3 {
+    func length() -> Float {
+        return sqrtf(x * x + y * y + z * z)
+    }
+}
+func - (l: SCNVector3, r: SCNVector3) -> SCNVector3 {
+    return SCNVector3Make(l.x - r.x, l.y - r.y, l.z - r.z)
+}
+
+
+
