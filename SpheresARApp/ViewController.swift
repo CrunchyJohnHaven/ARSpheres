@@ -107,10 +107,9 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
     }
     
     func random(_ range:Range<Float>) -> Float {
-        print("range.lowerBound: ", range.lowerBound, "  ", "range.upperBound: ", range.upperBound)
         var x = range.lowerBound + Float(arc4random_uniform(UInt32(range.upperBound - range.lowerBound)))
         x = x/1000
-        print(x)
+//        print(x)
         return x
         
     }
