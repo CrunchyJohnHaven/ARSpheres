@@ -35,21 +35,14 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
         sceneView.showsStatistics = true
         sceneView.self.scene = scene
         
+//      generates 10x Spheres
         positions()
+        
     }
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         let configuration = ARWorldTrackingConfiguration()
         sceneView.session.run(configuration)
-//        refreshView()
-    }
-    
-    func refreshView() {
-        print("refresh")
-        for child in self.scene.rootNode.childNodes {
-            child.removeFromParentNode()
-        }
-        positions()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -71,24 +64,22 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
         sphereNode.opacity = 1.0
         return sphereNode
     }
-    func addTapGestureToSceneView() {
-        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(ViewController.didTap(withGestureRecognizer:)))
-        sceneView.addGestureRecognizer(tapGestureRecognizer)
-    }
 
-    @objc func didTap(withGestureRecognizer recognizer: UIGestureRecognizer) {
-        refreshView()
-
-    }
-    
+//    Creates 10x spheres with an earth.jpeg wrapper
     func positions() {
         var i = 0
         while i < 10 {
+//          generates 3x random Floats between -1 and 1
             self.changeX = random(-1000..<1000)
             self.changeY = random(-1000..<1000)
             self.changeZ = random(-1000..<1000)
+
             let position = SCNVector3(self.changeX!,self.changeY!, self.changeZ!)
+//          creates a sphere at the x,y,z SCNVector3 positions that were randoms generated
             let sphere = createSpheres(at: position)
+
+//          check the newly created sphere against the already added spheres sets a boolean to false
+//          if any of the spheres are within 0.3048 meters of another sphere
             for child in self.scene.rootNode.childNodes {
                 self.bool = true
                 let distance = sphere.position - child.position
@@ -97,6 +88,7 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
                     self.bool = false
                 }
             }
+//          appends the newly generated sphere if it isn't within a foot of any other sphere
             if self.bool == true {
                 self.scene.rootNode.addChildNode(sphere)
                 self.globePositions.append([Float(self.changeX!), Float(self.changeY!), Float(self.changeZ!)])
@@ -105,15 +97,16 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
         }
         print(self.scene.rootNode.childNodes)
     }
-    
+
     func random(_ range:Range<Float>) -> Float {
         var x = range.lowerBound + Float(arc4random_uniform(UInt32(range.upperBound - range.lowerBound)))
         x = x/1000
-//        print(x)
         return x
         
     }
     
+//  runs everytime a frame changes and resets the opacity of all the spheres based on proximity to the user
+//    (0.2 if the SCNNode is more than 1.5 meters away, 1.0 if the user on top of the node)
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
         guard let pointOfView = sceneView.pointOfView else { return }
         let transform = pointOfView.transform
@@ -134,6 +127,26 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
 //            print("child length:", length, "child opacity: ", child.opacity)
         }
     }
+//    initializes func listener for a tap
+    func addTapGestureToSceneView() {
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(ViewController.didTap(withGestureRecognizer:)))
+        sceneView.addGestureRecognizer(tapGestureRecognizer)
+    }
+// calls refreshView func upon user tap action
+    @objc func didTap(withGestureRecognizer recognizer: UIGestureRecognizer) {
+        refreshView()
+        
+    }
+    
+//  removes all SCNNodes and runs the positions function to create 10x new ones
+    func refreshView() {
+        print("refresh")
+        for child in self.scene.rootNode.childNodes {
+            child.removeFromParentNode()
+        }
+        positions()
+    }
+    
 
     func session(_ session: ARSession, didFailWithError error: Error) {
     }
